@@ -1,4 +1,4 @@
-# Nessus Parser Tool
+# NessusNibbler 
 
 Nessus Parser is a Python script for extracting outdated software and associated targets from Nessus (.nessus) files. It supports output in both Word Document (docx) and Command Line Interface (CLI) formats.
 
