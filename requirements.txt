@@ -1,0 +1,2 @@
+Flask==2.1.1
+python-docx==0.8.11

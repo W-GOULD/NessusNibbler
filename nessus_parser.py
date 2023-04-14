@@ -6,6 +6,7 @@ import docx
 from docx.shared import Cm
 from docx.enum.style import WD_STYLE
 
+
 def parse_installed_software(software_text):
     software_list = []
     for line in software_text.split('\n'):
@@ -206,17 +207,19 @@ def print_output(vulnerabilities, output_format="docx", output_file="output.docx
                 p_bullet.paragraph_format.first_line_indent = docx.shared.Cm(-0.6)
                 p_bullet.paragraph_format.left_indent = docx.shared.Cm(0.6)
 
-        doc.save("output.docx")
-    elif output_format == "cli":
-        for finding_name, info in vulnerabilities.items():
-            print(f"\n{finding_name}\n")
-            print("Description:")
-            print(info['description'])
-            print("\nDetails:")
-            print(info['plugin_output'])
-            print("\nAffected Targets:")
-            for target in info['targets']:
-                print(f"  - {target}")
+        doc.save(output_file)
+
+    elif output_format == "txt":
+        with open(output_file, 'w') as output_txt:
+            for finding_name, info in vulnerabilities.items():
+                output_txt.write(f"\n{finding_name}\n")
+                output_txt.write("Description:\n")
+                output_txt.write(info['description'])
+                output_txt.write("\n\nDetails:\n")
+                output_txt.write(info['plugin_output'])
+                output_txt.write("\n\nAffected Targets:\n")
+                for target in info['targets']:
+                    output_txt.write(f"  - {target}\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Nessus parser for extracting outdated software and associated targets")
@@ -224,7 +227,7 @@ if __name__ == "__main__":
     parser.add_argument("-mp", "--microsoft-patches", action="store_true", help="Only include findings related to Microsoft missing patches")
     parser.add_argument("-tp", "--third-party", action="store_true", help="Only include findings related to third-party outdated software")
     parser.add_argument("-o", "--output", dest="output_file", default="output.docx", help="Output file name (default: output.docx)")
-    parser.add_argument("-fmt", "--format", dest="output_format", choices=["docx", "cli"], default="docx", help="Output format: docx (Word document) or cli (command-line) (default: docx)")
+    parser.add_argument("-fmt", "--format", dest="output_format", choices=["docx", "txt"], default="docx", help="Output format: docx (Word document) or txt (text file) (default: docx)")
 
 
     args = parser.parse_args()
