@@ -1,45 +1,51 @@
-# NessusNibbler 
+# NessusNibbler
 
-Nessus Parser is a Python script for extracting outdated software and associated targets from Nessus (.nessus) files. It supports output in both Word Document (docx) and Command Line Interface (CLI) formats.
+NessusNibbler is a Python script for extracting missing Windows patches, third-party software vulnerabilities, and associated targets from Nessus (.nessus) files. It supports output in both Word Document (docx) and plain text (txt) formats.
 
 ## Features
 
-- Extract outdated software and associated targets from Nessus files
-- Filter extracted data based on Microsoft missing patches or third-party outdated software
-- Generate output in Word Document (docx) or Command Line Interface (CLI) format
+- Extract missing Windows patches, third-party software vulnerabilities, and associated targets from Nessus files
+- Generate output in Word Document (docx) or plain text (txt) format
+- Easy to use via command-line interface (CLI) or Docker
 - Customize output file name and format
 
 ## Prerequisites
 
-To use the Nessus Parser tool, you need Python 3.x and the following packages installed:
+To use the NessusNibbler tool, you need Python 3.x and the following packages installed:
 
+- `Flask`
 - `python-docx`
 
-You can install the required package using pip:
+You can install the required packages using pip:
 
 ```bash
-pip install python-docx
+pip install Flask python-docx 
 ```
 
 ## Usage
-To use the Nessus Parser tool, navigate to the directory containing the `nessus-parser.py` file and run the following command:
 
+NessusNibbler can be used via the command-line interface (CLI) or Docker.
+
+### Command Line Interface (CLI)
+To use the NessusNibbler tool, navigate to the directory containing the app.py file and run the following command:
 ```bash 
-python nessus-parser.py -f <path_to_nessus_file> [options]
+python app.py
+```
+Then, open your web browser and visit `http://localhost:8000` to access the application.
+
+### Docker
+To use the NessusNibbler tool with Docker, first build the Docker image:
+
+```bash
+docker build -t nessus-nibbler .
 ```
 
-Options:
+Then, run the Docker container:
 
-- `-f`, `--file` : (Required) Path to the Nessus (.nessus) file
-- `-mp`, `--microsoft-patches` : (Optional) Only include findings related to Microsoft missing patches
-- `-tp`, `--third-party` : (Optional) Only include findings related to third-party outdated software
-- `-o`, `--output` : (Optional) Output file name (default: output.docx)
-- `-fmt`, `--format` : (Optional) Output format: docx (Word document) or cli (command-line) (default: docx)
-
-Example usage:
 ```bash 
-python nessus-parser.py -f sample.nessus -mp -o sample_output.docx -fmt docx
+docker run -d -p 8000:8000 nessus-nibbler
 ```
-This command will parse the `sample.nessus` file, filter findings related to Microsoft missing patches, and generate a Word document output with the file name `sample_output.docx`.
+Open your web browser and visit `http://localhost:8000` to access the application.
 
-
+## License
+NessusNibbler is released under the MIT License.
