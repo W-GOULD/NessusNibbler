@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NessesNibbler</title>
+    <title>NessusNibbler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,6 +18,10 @@
             text-align: center;
             color: #333;
             margin-bottom: 30px;
+            font-size: 40px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
         form {
             background-color: #ffffff;
@@ -29,7 +34,20 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="file"], select {
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 1px solid #ddd;
+            display: inline-block;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 14px;
+            width: 100%;
+            text-align: center;
+        }
+        select {
             width: 100%;
             padding: 6px;
             border: 1px solid #ddd;
@@ -37,7 +55,57 @@
             border-radius: 3px;
             font-size: 14px;
         }
-        button {
+        .custom-checkbox {
+            display: inline-block;
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            user-select: none;
+        }
+        .custom-checkbox input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+        .checkmark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 16px;
+            width: 16px;
+            background-color: #eee;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .custom-checkbox:hover input ~ .checkmark {
+            background-color: #ccc;
+        }
+        .custom-checkbox input:checked ~ .checkmark {
+            background-color: #007BFF;
+            border: 1px solid #007BFF;
+        }
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+        }
+        .custom-checkbox input:checked ~ .checkmark:after {
+            display: block;
+        }
+        .custom-checkbox .checkmark:after {
+            left: 5px;
+            top: 1px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+            }
+            button {
             background-color: #007BFF;
             color: white;
             padding: 10px 20px;
@@ -47,104 +115,124 @@
             font-size: 16px;
             margin-top: 10px;
             width: 100%;
-        }
-        button:hover {
+            }
+            button:hover {
             background-color: #0056b3;
-        }
-        #progress-container {
+            }
+            #progress-container {
             display: none;
             margin-top: 20px;
-        }
-        #progress-bar {
+            }
+            #progress-bar {
             background-color: #007BFF;
             height: 20px;
             width: 0;
             border-radius: 3px;
-        }
+            }
     </style>
 </head>
 <body>
-    <h1>NessesNibbler</h1>
+    <h1><i class="fas fa-file"></i> NessusNibbler</h1>
     <form id="upload-form" enctype="multipart/form-data">
         <label for="file">Nessus file:</label>
-        <input type="file" id="file" name="file" required><br><br>
-
-        <label for="microsoft_patches">Microsoft patches:</label>
-        <input type="checkbox" id="microsoft_patches" name="microsoft_patches"><br><br>
-
-        <label for="third_party">Third party:</label>
-        <input type="checkbox" id="third_party" name="third_party"><br><br>
-
+        <input type="file" id="file" name="file" required>
+        <label for="file" class="custom-file-upload">
+            <i class="fas fa-cloud-upload-alt"></i> <span id="file-label">Browse...</span>
+        </label>        
+        <br><br>
+        <label class="custom-checkbox">
+            <input type="checkbox" id="microsoft_patches" name="microsoft_patches">
+            <span class="checkmark"></span>
+            Microsoft patches
+        </label><br><br>
+    
+        <label class="custom-checkbox">
+            <input type="checkbox" id="third_party" name="third_party">
+            <span class="checkmark"></span>
+            Third party
+        </label><br><br>
+    
         <label for="output_format">Output format:</label>
         <select id="output_format" name="output_format">
             <option value="docx">docx</option>
             <option value="txt">txt</option>
         </select><br><br>
-
+    
         <button type="submit">Submit</button>
     </form>
     <div id="progress-container">
         <div id="progress-bar"></div>
     </div>
     <div id="output"></div>
-
-    <script>
-        const progressBar = document.getElementById('progress-bar');
-        const progressContainer = document.getElementById('progress-container');
-
-        function showProgress() {
-            progressContainer.style.display = 'block';
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 1;
-                progressBar.style.width = `${progress}%`;
-
-                if (progress >= 100) {
-                    clearInterval(progressInterval);
-                }
-            }, 30);
-        }
-
-        function hideProgress() {
-            progressContainer.style.display = 'none';
-            progressBar.style.width = '0';
-        }
-
-        document.getElementById('upload-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            showProgress();
-
-            const formData = new FormData(event.target);
-            const response = await fetch('/process', {method: 'POST', body: formData});
-
-            hideProgress();
-
-            if (response.ok) {
-                const outputFormat = formData.get('output_format');
-                if (outputFormat === 'docx') {
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'output.docx';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                } else {
-                    const text = await response.text();
-                    const url = URL.createObjectURL(new Blob([text], {type: 'text/plain'}));
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'output.txt';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            } else {
-                alert('An error occurred. Please try again.');
+        <script>
+            const progressBar = document.getElementById('progress-bar');
+            const progressContainer = document.getElementById('progress-container');
+        
+            function showProgress() {
+                progressContainer.style.display = 'block';
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 1;
+                    progressBar.style.width = `${progress}%`;
+        
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                    }
+                }, 30);
             }
-        });
-    </script>
-</body>
-</html>
-
+        
+            function hideProgress() {
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0';
+            }
+        
+            document.getElementById('upload-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                showProgress();
+        
+                const formData = new FormData(event.target);
+                const response = await fetch('/process', {method: 'POST', body: formData});
+        
+                hideProgress();
+        
+                if (response.ok) {
+                    const outputFormat = formData.get('output_format');
+                    if (outputFormat === 'docx') {
+                        const blob = await response.blob();
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'output.docx';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        const text = await response.text();
+                        const url = URL.createObjectURL(new Blob([text], {type: 'text/plain'}));
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = 'output.txt';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                } else {
+                    alert('An error occurred. Please try again.');
+                }
+            });
+        </script>
+        <script>
+            document.getElementById('file').addEventListener('change', function (event) {
+                const fileLabel = document.getElementById('file-label');
+                const fileInput = event.target;
+                if (fileInput.files.length > 0) {
+                    const filename = fileInput.files[0].name;
+                    fileLabel.textContent = filename;
+                } else {
+                    fileLabel.textContent = 'Browse...';
+                }
+            });
+        </script>
+        
+     </body>
+</html>   
