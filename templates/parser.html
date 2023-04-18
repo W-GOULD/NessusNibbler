@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="my-4">Nessus Parser</h1>
+        <form action="{{ url_for('process_parsing') }}" method="POST" enctype="multipart/form-data" class="bg-light p-4 rounded">
+            {% if nessus_file %}
+            <input type="hidden" name="nessus_file" value="{{ nessus_file }}">
+            {% endif %}
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="microsoft_patches" id="microsoft_patches">
+                <label class="form-check-label" for="microsoft_patches">Microsoft Patches</label>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="third_party" id="third_party">
+                <label class="form-check-label" for="third_party">Third-party</label>
+            </div>
+            <div class="form-group mb-3">
+                <label for="output_format">Output format:</label>
+                <select name="output_format" id="output_format" class="form-control">
+                    <option value="docx">docx</option>
+                    <option value="txt">txt</option>
+                </select>
+            </div>
+            <input type="submit" value="Export" class="btn btn-primary">
+        </form>
+        <div id="progress-container" class="my-4">
+            <div id="progress-bar" class="bg-info" style="height: 20px; width: 0;"></div>
+        </div>
+        <div id="output"></div>
+    </div>
+{% endblock %}

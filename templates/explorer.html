@@ -1,0 +1,179 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h2>Exploration Results</h2>
+
+    {% if not findings %}
+        <p>No data found. Please upload a Nessus file first.</p>
+    {% else %}
+        <div class="advanced-search">
+            <div class="advanced-search-panel">
+                <h4>Advanced Search</h4>
+                <form>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="host-ip">Host IP</label>
+                            <input type="text" class="form-control" id="host-ip">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="plugin-name">Plugin Name</label>
+                            <input type="text" class="form-control" id="plugin-name">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="host-name">Host Name</label>
+                            <input type="text" class="form-control" id="host-name">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="plugin-id">Plugin ID</label>
+                            <input type="text" class="form-control" id="plugin-id">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="risk">Risk</label>
+                            <input type="text" class="form-control" id="risk">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="port">Port</label>
+                            <input type="text" class="form-control" id="port">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="service">Service</label>
+                            <input type="text" class="form-control" id="service">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="description-synopsis">Description & Synopsis</label>
+                            <input type="text" class="form-control" id="description-synopsis">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="button" class="btn btn-primary mt-2" id="advanced-search-btn">Search</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    
+
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered" id="vulnerabilities-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Plugin Name</th>
+                    <th>Host IP</th>
+                    <th>Port</th>
+                    <th>Service</th>
+                    <th>OS</th>
+                    <th>Host Name</th>
+                    <th>Risk Rating</th>
+                    <th>External Reference</th>
+                    <th>CVSSv3</th>
+                    <th>CVSSv3 Vector</th>
+                    <th>Description</th>
+                    <th>Synopsis</th>
+                    <th>Solution</th>
+                    <th>Plugin Output</th>
+                    <th>CVE</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for finding in findings %}
+                    <tr>
+                        <td>{{ finding.id }}</td>
+                        <td>{{ finding.plugin_name }}</td>
+                        <td>{{ finding.host_ip }}</td>
+                        <td>{{ finding.port }}</td>
+                        <td>{{ finding.service }}</td>
+                        <td>{{ finding.os }}</td>
+                        <td>{{ finding.hostname }}</td>
+                        <td>{{ finding.risk_rating }}</td>
+                        <td>{{ finding.external_reference }}</td>
+                        <td>{{ finding.cvssv3 }}</td>
+                        <td>{{ finding.cvssv3_vector }}</td>
+                        <td>{{ finding.description }}</td>
+                        <td>{{ finding.synopsis }}</td>
+                        <td>{{ finding.solution }}</td>
+                        <td>{{ finding.plugin_output }}</td>
+                        <td>{{ finding.cve }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+{% endblock %}
+{% block scripts %}
+    <script>
+        $(document).ready(function() {
+            const table = $('#vulnerabilities-table').DataTable({
+                "pageLength": 25,
+                "lengthChange": false,
+                "order": [[ 0, "asc" ]],
+                "dom": 'Bfrtip',
+                "buttons": [
+                    {
+                        "extend": 'csvHtml5',
+                        "text": 'Export CSV',
+                        "titleAttr": 'Export to CSV',
+                        "exportOptions": {
+                            "columns": ':visible'
+                        }
+                    }
+                ]
+            });
+
+    
+            $('#advanced-search-btn').on('click', function() {
+                const searchParams = {
+                    'host-ip': $('#host-ip').val().trim(),
+                    'plugin-name': $('#plugin-name').val().trim(),
+                    'host-name': $('#host-name').val().trim(),
+                    'plugin-id': $('#plugin-id').val().trim(),
+                    'risk': $('#risk').val().trim(),
+                    'port': $('#port').val().trim(),
+                    'service': $('#service').val().trim(),
+                    'description-synopsis': $('#description-synopsis').val().trim()
+                };
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/search',
+                    data: searchParams,
+                    success: function(filtered_findings) {
+                        table.clear().draw();
+                        for (const finding of filtered_findings) {
+                            table.row.add([
+                                finding.id,
+                                finding.plugin_name,
+                                finding.host_ip,
+                                finding.port,
+                                finding.service,
+                                finding.os,
+                                finding.hostname,
+                                finding.risk_rating,
+                                finding.external_reference,
+                                finding.cvssv3,
+                                finding.cvssv3_vector,
+                                finding.description,
+                                finding.synopsis,
+                                finding.solution,
+                                finding.plugin_output,
+                                finding.cve
+                            ]).draw(false);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error: ", error);
+                    }
+                });
+            });
+
+            });
+    </script>
+    
+{% endblock %}
+
+

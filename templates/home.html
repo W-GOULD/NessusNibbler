@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <header class="container-fluid">
+        <div class="container text-center" id="uploadBox">
+            <h1>NessusNibbler</h1>
+            <div class="form col-xs-12">
+                <form id="upload-form" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+                    <input type="file" name="file" id="file" required>
+                    <label for="file" class="custom-file-upload">
+                        <i class="fas fa-cloud-upload-alt"></i> <span id="file-label">Browse...</span>
+                    </label>
+                    <input type="submit" value="Upload">
+                </form>
+            </div>
+        </div>
+    </header>
+    <div id="mainBody" class="container text-center">
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="output"></div>
+    </div>
+    <footer class="text-center"></footer>
+    {% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const nav = document.querySelector('nav');
+            if (nav) {
+                nav.style.display = 'none';
+            }
+        });
+    </script>
+    {% endblock %}
+{% endblock %}

@@ -1,0 +1,144 @@
+body {
+    background: #eee;
+    letter-spacing: 2px;
+    min-height: 101vh;
+    max-width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  a:hover, a:active {
+    text-decoration: none;
+  }
+  
+  input[type="file"], select {
+    outline: none;
+  }
+  
+  .col-xs-1 {
+    padding: 0;
+  }
+  
+  h1 {
+    font-family: 'Arvo', sans-serif;
+    color: #E35865;
+    margin-bottom: 30px;
+    font-size: 40px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  
+  header.container-fluid {
+    margin: 0;
+    background-color: #39404A;
+    box-shadow: 0 0px 3px 3px rgba(0, 0, 0, .4);
+    height: 100vh;
+    min-height: 150px;
+  }
+  
+  .container {
+    max-width: 720px;
+    margin: auto;
+    padding: 0 50px;
+  }
+  
+  .custom-file-upload {
+    display: inline-block;
+    padding: 6px 12px;
+    cursor: pointer;
+    color: #E35865;
+    font-size: 20px;
+    line-height: 25px;
+  }
+  
+  input[type="file"] {
+    display: none;
+  }
+  
+  input[type="submit"] {
+    background: none;
+    border: none;
+    color: #E35865;
+    font-size: 20px;
+    line-height: 25px;
+    cursor: pointer;
+  }
+  
+  #uploadBox {
+    padding-top: 40vh;
+  }
+  
+  #mainBody {
+    font-family: 'Montserrat', sans-serif;
+  }
+  
+  /* Media query */
+  @media screen and (max-width: 420px) {
+    h1 {
+      font-size: 28px;
+    }
+  }
+.custom-checkbox:hover input ~ .checkmark {
+    background-color: #ccc;
+}
+
+.custom-checkbox input:checked ~ .checkmark {
+    background-color: #007BFF;
+    border: 1px solid #007BFF;
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.custom-checkbox input:checked ~ .checkmark:after {
+    display: block;
+}
+
+.custom-checkbox .checkmark:after {
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+}
+
+.loading-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+.advanced-search {
+    margin-bottom: 20px;
+}
+.advanced-search-panel {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+form {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}

@@ -44,6 +44,7 @@ def clean_description_text(description_text):
     cleaned_text = re.sub(r'<code>|</code>', '', description_text)
     cleaned_text = re.sub(r' {2,}', ' ', cleaned_text)
     return cleaned_text
+    
 
 def parse_nessus_file(file_name, microsoft_patches, third_party):
     tree = ET.parse(file_name)
@@ -93,6 +94,63 @@ def parse_nessus_file(file_name, microsoft_patches, third_party):
                             process_third_party_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host)
 
     return vulnerabilities
+
+def explore_nessus_file(file_name):
+    if file_name is None:
+        return [], {}
+
+    tree = ET.parse(file_name)
+    root = tree.getroot()
+
+    findings = []
+
+    for host in root.findall(".//ReportHost"):
+        target = host.get("name")
+        os = host.find('./HostProperties/tag[@name="os"]').text
+        hostname = host.find('./HostProperties/tag[@name="host-fqdn"]').text if host.find('./HostProperties/tag[@name="host-fqdn"]') is not None else 'N/A'
+
+        for item in host.findall('.//ReportItem'):
+            plugin_id = item.get("pluginID")
+            plugin_name = item.find('plugin_name').text
+            severity = int(item.get("severity"))
+            port = item.get("port")
+            service = item.get("svc_name")
+
+            if severity >= 0:
+                description = clean_description_text(item.find('description').text.strip())
+                synopsis = item.find('synopsis').text.strip()
+                solution = item.find('solution').text.strip()
+                plugin_output_element = item.find('plugin_output')
+                plugin_output = plugin_output_element.text.strip() if plugin_output_element is not None and plugin_output_element.text is not None else 'N/A'
+                cve = item.find('cve').text.strip() if item.find('cve') is not None else 'N/A'
+                cvss3_base_score = item.find('cvss3_base_score').text.strip() if item.find('cvss3_base_score') is not None else 'N/A'
+                cvss3_vector = item.find('cvss3_vector').text.strip() if item.find('cvss3_vector') is not None else 'N/A'
+                external_reference = item.find('see_also').text.strip() if item.find('see_also') is not None else 'N/A'
+
+                finding = {
+                    'id': plugin_id,
+                    'plugin_name': plugin_name,
+                    'host_ip': target,
+                    'port': port,
+                    'service': service,
+                    'os': os,
+                    'hostname': hostname,
+                    'risk_rating': severity,
+                    'external_reference': external_reference,
+                    'cvssv3': cvss3_base_score,
+                    'cvssv3_vector': cvss3_vector,
+                    'description': description,
+                    'synopsis': synopsis,
+                    'solution': solution,
+                    'plugin_output': plugin_output,
+                    'cve': cve
+                }
+
+                findings.append(finding)
+
+    return findings
+
+
 
 def print_output(vulnerabilities, output_format="docx", output_file="output.docx"):
     if output_format == "docx":
@@ -173,12 +231,16 @@ if __name__ == "__main__":
     parser.add_argument("-tp", "--third-party", action="store_true", help="Only include findings related to third-party outdated software")
     parser.add_argument("-o", "--output", dest="output_file", default="output.docx", help="Output file name (default: output.docx)")
     parser.add_argument("-fmt", "--format", dest="output_format", choices=["docx", "txt"], default="docx", help="Output format: docx (Word document) or txt (text file) (default: docx)")
-
+    parser.add_argument("-e", "--explore", action="store_true", help="Enable explore mode to extract all vulnerabilities and affected hosts")
 
     args = parser.parse_args()
 
-    vulnerabilities = parse_nessus_file(args.file_name, args.microsoft_patches, args.third_party)
-    print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
+    if args.explore:
+        hosts, vulnerabilities = explore_nessus_file(args.file_name)
+        print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
+    else:
+        vulnerabilities = parse_nessus_file(args.file_name, args.microsoft_patches, args.third_party)
+        print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
 
     # Delete the .nessus file after processing
-    os.remove(args.file_name)
+#    os.remove(args.file_name)
