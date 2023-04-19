@@ -1,4 +1,4 @@
-# Nessus Parser
+# NessusNibbler
 
 This is a Nessus parser tool that can be used through a command line interface or a web application, that processes XML exports from the Nessus vulnerability scanner and generates an output in .docx or .txt format. The script filters Microsoft patches and third-party vulnerabilities, processes unquoted service path vulnerabilities, and explores Nessus files to collect relevant data.
 
@@ -53,11 +53,11 @@ To run the web application using Docker, follow these steps:
 2. Build the Docker image:
 
 ```bash
-$ docker build -t nessus-parser .
+$ docker build -t nessusnibbler .
 ```
 3. Run the Docker container:
 ```bash 
-$ docker run -d -p 8000:8000 --name nessus-parser-container nessus-parser
+$ docker run -d -p 8000:8000 nessusnibbler
 ```
 
 The web application will be accessible at `http://localhost:8000`.
