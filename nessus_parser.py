@@ -115,7 +115,8 @@ def explore_nessus_file(file_name):
 
     for host in root.findall(".//ReportHost"):
         target = host.get("name")
-        os = host.find('./HostProperties/tag[@name="os"]').text
+        os_tag = host.find('./HostProperties/tag[@name="os"]')
+        os = os_tag.text if os_tag is not None else "Unknown"
         hostname = host.find('./HostProperties/tag[@name="host-fqdn"]').text if host.find('./HostProperties/tag[@name="host-fqdn"]') is not None else 'N/A'
 
         for item in host.findall('.//ReportItem'):
