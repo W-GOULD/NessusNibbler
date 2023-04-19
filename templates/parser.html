@@ -2,7 +2,7 @@
 
 {% block content %}
     <div class="container">
-        <h1 class="my-4">Nessus Parser</h1>
+        <h1 class="my-4">Export Options</h1>
         <form action="{{ url_for('process_parsing') }}" method="POST" enctype="multipart/form-data" class="bg-light p-4 rounded">
             {% if nessus_file %}
             <input type="hidden" name="nessus_file" value="{{ nessus_file }}">
@@ -10,19 +10,27 @@
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" name="microsoft_patches" id="microsoft_patches">
                 <label class="form-check-label" for="microsoft_patches">Microsoft Patches</label>
+                <small class="form-text text-muted">Select this option to include only Microsoft patches in the export.</small>
             </div>
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" name="third_party" id="third_party">
                 <label class="form-check-label" for="third_party">Third-party</label>
+                <small class="form-text text-muted">Select this option to include only third-party patches in the export.</small>
             </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="unquoted_service_path" id="unquoted_service_path">
+                <label class="form-check-label" for="unquoted_service_path">Unquoted Service Path Vulnerabilities</label>
+                <small class="form-text text-muted">Select this option to include only unquoted service path vulnerabilities in the export.</small>
+            </div>            
             <div class="form-group mb-3">
                 <label for="output_format">Output format:</label>
                 <select name="output_format" id="output_format" class="form-control">
                     <option value="docx">docx</option>
                     <option value="txt">txt</option>
                 </select>
+                <small class="form-text text-muted">Choose the format for the exported file: docx (Microsoft Word) or txt (plain text).</small>
             </div>
-            <input type="submit" value="Export" class="btn btn-primary">
+            <input type="submit" value="Export Findings" class="btn btn-primary">
         </form>
         <div id="progress-container" class="my-4">
             <div id="progress-bar" class="bg-info" style="height: 20px; width: 0;"></div>
@@ -30,3 +38,4 @@
         <div id="output"></div>
     </div>
 {% endblock %}
+

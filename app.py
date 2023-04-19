@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, send_file,
 from werkzeug.utils import secure_filename
 import os
 import nessus_parser
+import datetime
+import werkzeug
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'nessus'}
@@ -41,6 +43,19 @@ def search_data(data, search_dict):
 def home():
     return render_template('home.html', current_url=request.url)
 
+@app.route('/control_panel', methods=['GET'])
+def control_panel():
+    files = []
+    for filename in os.listdir(UPLOAD_FOLDER):
+        if filename.endswith('.nessus'):
+            timestamp_file = os.path.join(UPLOAD_FOLDER, filename + '.timestamp')
+            if os.path.exists(timestamp_file):
+                with open(timestamp_file, 'r') as f:
+                    uploaded = f.read()
+            else:
+                uploaded = 'Unknown'
+            files.append({'filename': filename, 'uploaded': uploaded})
+    return render_template('control_panel.html', files=files)
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -50,10 +65,47 @@ def upload():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         nessus_file.save(filepath)
         session['nessus_file'] = filepath
-        return jsonify({"url": url_for('parser')})
+
+        # Save the upload timestamp
+        with open(filepath + '.timestamp', 'w') as f:
+            f.write(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+        return jsonify({"url": url_for('control_panel')})
     else:
         flash('File is not supported or corrupted', 'error')
         return jsonify({"error": "File is not supported or corrupted"}), 400
+    
+@app.route('/delete_file/<filename>', methods=['GET'])
+def delete_file(filename):
+    secure_filename = werkzeug.utils.secure_filename(filename)
+    if allowed_file(secure_filename):
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename)
+        timestamp_filepath = filepath + '.timestamp'
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            if os.path.exists(timestamp_filepath):
+                os.remove(timestamp_filepath)
+                flash('File deleted successfully', 'success')
+        else:
+            flash('File not found', 'error')
+    else:
+        flash('Invalid file', 'error')
+
+    return redirect(url_for('control_panel'))
+
+@app.route('/parser', methods=['GET'])
+def parser():
+    filename = request.args.get('filename')
+    if filename and allowed_file(filename):
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        session['nessus_file'] = filepath
+    elif 'nessus_file' in session:
+        filepath = session['nessus_file']
+    else:
+        filepath = None
+
+    return render_template('parser.html', nessus_file=filepath)
+
 
 @app.route('/process-parsing', methods=['POST'])
 def process_parsing():
@@ -61,26 +113,18 @@ def process_parsing():
     nessus_file = session.get('nessus_file', None)
     microsoft_patches = request.form.get('microsoft_patches') is not None
     third_party = request.form.get('third_party') is not None
+    unquoted_service_path = request.form.get('unquoted_service_path') is not None
     output_format = request.form['output_format']
 
     if nessus_file:
         output_file = os.path.join(app.config['UPLOAD_FOLDER'], 'output.' + output_format)
 
-        vulnerabilities = nessus_parser.parse_nessus_file(nessus_file, microsoft_patches, third_party)
+        vulnerabilities = nessus_parser.parse_nessus_file(nessus_file, microsoft_patches, third_party, unquoted_service_path)
         nessus_parser.print_output(vulnerabilities, output_format, output_file)
 
         return send_file(output_file, as_attachment=True, attachment_filename='output.' + output_format)
     else:
         return jsonify({"error": "File is not supported or corrupted"}), 400
-
-
-@app.route('/parser', methods=['GET'])
-def parser():
-    if 'nessus_file' in session:
-        filepath = session['nessus_file']
-        return render_template('parser.html', nessus_file=filepath)
-    return render_template('parser.html')
-
 
 @app.route('/explorer', methods=['GET'])
 def explorer():

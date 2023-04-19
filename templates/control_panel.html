@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Control Panel</h2>
+    <div class="d-flex justify-content-between mt-3">
+        <a href="{{ url_for('home') }}" class="btn btn-primary">Upload</a>
+    </div>
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Uploaded</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for file in files %}
+            <tr>
+                <td><a href="{{ url_for('parser', filename=file['filename']) }}">{{ file['filename'] }}</a></td>
+                <td>{{ file['uploaded'] }}</td>
+                <td><a href="{{ url_for('delete_file', filename=file['filename']) }}" class="btn btn-danger btn-sm">Delete</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
