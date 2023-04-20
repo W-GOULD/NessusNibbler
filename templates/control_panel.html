@@ -1,11 +1,8 @@
 {% extends "layout.html" %}
-
+{% set current_url = url_for('control_panel') %}
 {% block content %}
 <div class="container mt-5">
     <h2>Control Panel</h2>
-    <div class="d-flex justify-content-between mt-3">
-        <a href="{{ url_for('home') }}" class="btn btn-primary">Upload</a>
-    </div>
     <table class="table table-striped mt-3">
         <thead>
             <tr>
@@ -24,5 +21,8 @@
             {% endfor %}
         </tbody>
     </table>
+    <div class="d-flex justify-content-between mt-3">
+        <a href="{{ url_for('home') }}" class="btn btn-danger" style="width: 100%;">Upload</a>
+    </div>
 </div>
 {% endblock %}

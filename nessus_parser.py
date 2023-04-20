@@ -276,6 +276,3 @@ if __name__ == "__main__":
     else:
         vulnerabilities = parse_nessus_file(args.file_name, args.microsoft_patches, args.third_party)
         print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
-
-    # Delete the .nessus file after processing
-#    os.remove(args.file_name)

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, flash, session
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, flash, session, render_template
 from werkzeug.utils import secure_filename
 import os
 import nessus_parser
@@ -150,6 +150,13 @@ def search():
     filtered_findings = search_data(findings, search_dict)
     return jsonify(filtered_findings)
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=False)

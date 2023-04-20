@@ -25,6 +25,7 @@
     <div class="loading-overlay" id="loading-overlay">
         <div class="loading-indicator">Loading...</div>
     </div>
+    {% if request.path != url_for('control_panel') %}
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
         <a class="navbar-brand" href="{{ url_for('home') }}">NessusNibbler</a>
@@ -46,6 +47,7 @@
         </div>
         </div>
     </nav>
+    {% endif %}
     <main>
         {% block content %}
         {% endblock %}
