@@ -113,13 +113,14 @@ def process_parsing():
     nessus_file = session.get('nessus_file', None)
     microsoft_patches = request.form.get('microsoft_patches') is not None
     third_party = request.form.get('third_party') is not None
+    linux_patches = request.form.get('linux_patches') is not None
     unquoted_service_path = request.form.get('unquoted_service_path') is not None
     output_format = request.form['output_format']
 
     if nessus_file:
         output_file = os.path.join(app.config['UPLOAD_FOLDER'], 'output.' + output_format)
 
-        vulnerabilities = nessus_parser.parse_nessus_file(nessus_file, microsoft_patches, third_party, unquoted_service_path)
+        vulnerabilities = nessus_parser.parse_nessus_file(nessus_file, microsoft_patches, third_party, linux_patches, unquoted_service_path)
         nessus_parser.print_output(vulnerabilities, output_format, output_file)
 
         return send_file(output_file, as_attachment=True, attachment_filename='output.' + output_format)
@@ -159,6 +160,6 @@ def internal_server_error(error):
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=False)
+    app.run(host='0.0.0.0', port=8000, debug=True)
 
 

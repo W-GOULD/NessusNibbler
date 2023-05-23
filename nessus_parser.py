@@ -10,13 +10,13 @@ from styles import create_styles
 
 
 def parse_installed_software(software_text):
-    software_list = []
-    for line in software_text.split('\n'):
-        match = re.search(r'cpe:/.*->\s+(.*)', line)
-        if match:
-            software = match.group(1)
-            software_list.append(software)
+    software_list = [match.group(1) for match in re.finditer(r'cpe:/.*->\s+(.*)', software_text)]
     return software_list
+
+
+def parse_linux_patches(linux_patches_text):
+    matches = [match.group(1) for match in re.finditer(r'\[ (.*?) \(', linux_patches_text)]
+    return matches
 
 
 def process_microsoft_patches(vulnerabilities, finding_name, description, plugin_output, host):
@@ -29,6 +29,7 @@ def process_microsoft_patches(vulnerabilities, finding_name, description, plugin
     if host not in vulnerabilities[finding_name]['targets']:
         vulnerabilities[finding_name]['targets'].append(host)
 
+
 def process_third_party_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host):
     if finding_name not in vulnerabilities:
         vulnerabilities[finding_name] = {
@@ -38,6 +39,7 @@ def process_third_party_vulnerabilities(vulnerabilities, finding_name, descripti
         }
     if host not in vulnerabilities[finding_name]['targets']:
         vulnerabilities[finding_name]['targets'].append(host)
+
 
 def process_unquoted_service_path_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host):
     if finding_name not in vulnerabilities:
@@ -50,16 +52,44 @@ def process_unquoted_service_path_vulnerabilities(vulnerabilities, finding_name,
         vulnerabilities[finding_name]['targets'].append(host)
     vulnerabilities[finding_name]['plugin_output'][host] = plugin_output
 
+
+def process_linux_patches(vulnerabilities, finding_name, description, plugin_output, host):
+    if finding_name not in vulnerabilities:
+        vulnerabilities[finding_name] = {
+            'description': description,
+            'plugin_output': plugin_output,
+            'targets': []
+        }
+    if host not in vulnerabilities[finding_name]['targets']:
+        vulnerabilities[finding_name]['targets'].append(host)
+
+
 def clean_description_text(description_text):
     cleaned_text = re.sub(r'<code>|</code>', '', description_text)
     cleaned_text = re.sub(r' {2,}', ' ', cleaned_text)
     return cleaned_text
 
-def parse_nessus_file(file_name, microsoft_patches, third_party, unquoted_service_path):
+linux_local_security_checks = [
+    'Alma Linux Local Security Checks',
+    'Amazon Linux Local Security Checks',
+    'CentOS Local Security Checks',
+    'Fedora Local Security Checks',
+    'Debian Local Security Checks',
+    'Gentoo Local Security Checks',
+    'Oracle Linux Local Security Checks',
+    'Red Hat Local Security Checks',
+    'Rocky Linux Local Security Checks',
+    'Scientific Linux Local Security Checks',
+    'SuSE Local Security Checks',
+    'Ubuntu Local Security Checks'
+]
+
+def parse_nessus_file(file_name, microsoft_patches, third_party, linux_patches, unquoted_service_path):
     tree = ET.parse(file_name)
     root = tree.getroot()
 
     installed_software = {}
+    linux_patches_lt = {}
     vulnerabilities = {}
     ms_bulletins_and_kbs = set()
 
@@ -68,6 +98,11 @@ def parse_nessus_file(file_name, microsoft_patches, third_party, unquoted_servic
         for item in host.findall('.//ReportItem[@pluginID="45590"]'):
             software_text = item.find('plugin_output').text.strip()
             installed_software[target] = parse_installed_software(software_text)
+        
+        if linux_patches:
+            for item in host.findall('.//ReportItem[@pluginID="66334"]'):
+                linux_patches_text = item.find('plugin_output').text.strip()
+                linux_patches_lt[target] = parse_linux_patches(linux_patches_text)
 
         if microsoft_patches:
             for item in host.findall('.//ReportItem[@pluginID="38153"]'):
@@ -83,6 +118,7 @@ def parse_nessus_file(file_name, microsoft_patches, third_party, unquoted_servic
 
         for finding in host.findall('.//ReportItem'):
             plugin_id = finding.get("pluginID")
+            plugin_family = finding.get('pluginFamily')
             severity = int(finding.get("severity"))
             if severity >= 1:
                 finding_name = finding.find('plugin_name').text
@@ -93,16 +129,33 @@ def parse_nessus_file(file_name, microsoft_patches, third_party, unquoted_servic
                 if plugin_id == "63155" and unquoted_service_path:  # Microsoft Windows Unquoted Service Path Enumeration
                     process_unquoted_service_path_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, target)
                 else:
-                    for host, software_list in installed_software.items():
+                    for host_key, software_list in installed_software.items():
                         combined_software_and_patches = software_list + list(ms_bulletins_and_kbs)
+                        
                         for item in combined_software_and_patches:
                             if item in finding_name:
                                 matched_bulletin_or_kb = any(bulletin_or_kb in finding_name for bulletin_or_kb in ms_bulletins_and_kbs)
+                                
                                 if microsoft_patches and matched_bulletin_or_kb:
-                                    process_microsoft_patches(vulnerabilities, finding_name, description, plugin_output, host)
+                                    process_microsoft_patches(vulnerabilities, finding_name, description, plugin_output, host_key)
                                 elif third_party and not matched_bulletin_or_kb and "Microsoft" not in item:
-                                    process_third_party_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host)
+                                    process_third_party_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
+
+                    # Separate loop for Linux patches
+                    if linux_patches:
+                        if plugin_family in linux_local_security_checks:
+                            for host_key, patches_list in linux_patches_lt.items():
+                                for patch in patches_list:
+                                    if patch in finding_name:
+                                        process_linux_patches(vulnerabilities, finding_name, description, plugin_output, host_key)
+                        else:
+                            print(f"Not in family :-( : {plugin_family}")
+                            print(finding.get('pluginFamily'))
+
     return vulnerabilities
+
+
+
 
 def explore_nessus_file(file_name):
     if file_name is None:
@@ -160,7 +213,9 @@ def explore_nessus_file(file_name):
 
     return findings
 
+
 def print_output(vulnerabilities, output_format="docx", output_file="output.docx"):
+    print(f"vulnerabilities: {vulnerabilities}\n\n\n")
     if output_format == "docx":
         doc = docx.Document()
 
@@ -192,7 +247,7 @@ def print_output(vulnerabilities, output_format="docx", output_file="output.docx
                     p_plugin_output = doc.add_paragraph(style='plugin_output')
                     p_plugin_output.add_run(info['plugin_output'][target])
             else:
-                for finding_name, info in vulnerabilities.items():
+                
                     p_finding_name = doc.add_paragraph(style='finding_name')
                     p_finding_name.add_run(finding_name)
 
@@ -259,20 +314,26 @@ def print_output(vulnerabilities, output_format="docx", output_file="output.docx
                     for target in info['targets']:
                         output_txt.write(f"  - {target}\n")
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser(description="Nessus parser for extracting outdated software and associated targets")
     parser.add_argument("-f", "--file", dest="file_name", required=True, help="Path to the Nessus (.nessus) file")
     parser.add_argument("-mp", "--microsoft-patches", action="store_true", help="Only include findings related to Microsoft missing patches")
     parser.add_argument("-tp", "--third-party", action="store_true", help="Only include findings related to third-party outdated software")
+    parser.add_argument("-lp", "--linux-patches", action="store_true", help="Only include findings related to Linux patches")
     parser.add_argument("-o", "--output", dest="output_file", default="output.docx", help="Output file name (default: output.docx)")
     parser.add_argument("-fmt", "--format", dest="output_format", choices=["docx", "txt"], default="docx", help="Output format: docx (Word document) or txt (text file) (default: docx)")
     parser.add_argument("-u", "--unquoted-service-path", action="store_true", help="Only include findings related to unquoted service path vulnerabilities")
 
     args = parser.parse_args()
 
-    if args.explore:
-        hosts, vulnerabilities = explore_nessus_file(args.file_name)
-        print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
-    else:
-        vulnerabilities = parse_nessus_file(args.file_name, args.microsoft_patches, args.third_party)
-        print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
+    #if args.explore:
+    #    hosts, vulnerabilities = explore_nessus_file(args.file_name)
+    #    print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
+    #else:
+    vulnerabilities = parse_nessus_file(args.file_name, args.microsoft_patches, args.third_party, args.linux_patches, args.unquoted_service_path)
+    print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
+
+
+if __name__ == "__main__":
+    main()
