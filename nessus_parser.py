@@ -327,12 +327,12 @@ def main():
 
     args = parser.parse_args()
 
-    #if args.explore:
-    #    hosts, vulnerabilities = explore_nessus_file(args.file_name)
-    #    print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
-    #else:
-    vulnerabilities = parse_nessus_file(args.file_name, args.microsoft_patches, args.third_party, args.linux_patches, args.unquoted_service_path)
-    print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
+    if args.explore:
+        hosts, vulnerabilities = explore_nessus_file(args.file_name)
+        print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
+    else:
+        vulnerabilities = parse_nessus_file(args.file_name, args.microsoft_patches, args.third_party, args.linux_patches, args.unquoted_service_path)
+        print_output(vulnerabilities, output_format=args.output_format, output_file=args.output_file)
 
 
 if __name__ == "__main__":
