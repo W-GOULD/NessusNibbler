@@ -6,7 +6,7 @@
             <h1>NessusNibbler</h1>
             <div class="form col-xs-12">
                 <form id="upload-form" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
-                    <input type="file" name="file" id="file" required>
+                    <input type="file" name="file" id="file" multiple required>
                     <label for="file" class="custom-file-upload">
                         <i class="fas fa-cloud-upload-alt"></i> <span id="file-label">Browse...</span>
                     </label>
@@ -32,6 +32,19 @@
             if (nav) {
                 nav.style.display = 'none';
             }
+    
+            const fileInput = document.getElementById('file');
+            const fileLabel = document.getElementById('file-label');
+    
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length > 1) {
+                    fileLabel.textContent = fileInput.files.length + " files selected";
+                } else if (fileInput.files.length === 1) {
+                    fileLabel.textContent = "1 file selected";
+                } else {
+                    fileLabel.textContent = "Browse...";
+                }
+            });
         });
     </script>
     {% endblock %}

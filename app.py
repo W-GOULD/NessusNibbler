@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, flash, session, render_template
 from werkzeug.utils import secure_filename
 import os
-import nessus_parser
+import main
 import datetime
 import werkzeug
 
@@ -59,21 +59,33 @@ def control_panel():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    nessus_file = request.files['file']
-    if nessus_file:
-        filename = secure_filename(nessus_file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        nessus_file.save(filepath)
-        session['nessus_file'] = filepath
+    if 'file' not in request.files:
+        flash('No file part')
+        return jsonify({"error": "No file part"}), 400
 
-        # Save the upload timestamp
-        with open(filepath + '.timestamp', 'w') as f:
-            f.write(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    files = request.files.getlist('file')
 
-        return jsonify({"url": url_for('control_panel')})
-    else:
-        flash('File is not supported or corrupted', 'error')
-        return jsonify({"error": "File is not supported or corrupted"}), 400
+    filepaths = []
+    for nessus_file in files:
+        if nessus_file.filename == '':
+            flash('No selected file')
+            return jsonify({"error": "No selected file"}), 400
+        if nessus_file:
+            filename = secure_filename(nessus_file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            nessus_file.save(filepath)
+            filepaths.append(filepath)
+
+            # Save the upload timestamp
+            with open(filepath + '.timestamp', 'w') as f:
+                f.write(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        else:
+            flash('File is not supported or corrupted', 'error')
+            return jsonify({"error": "File is not supported or corrupted"}), 400
+
+    session['nessus_files'] = filepaths
+    return jsonify({"url": url_for('control_panel')})
+
     
 @app.route('/delete_file/<filename>', methods=['GET'])
 def delete_file(filename):
@@ -120,8 +132,8 @@ def process_parsing():
     if nessus_file:
         output_file = os.path.join(app.config['UPLOAD_FOLDER'], 'output.' + output_format)
 
-        vulnerabilities = nessus_parser.parse_nessus_file(nessus_file, microsoft_patches, third_party, linux_patches, unquoted_service_path)
-        nessus_parser.print_output(vulnerabilities, output_format, output_file)
+        vulnerabilities = main.parse_and_extract_data_from_nessus_file(nessus_file, microsoft_patches, third_party, linux_patches, unquoted_service_path)
+        main.print_output(vulnerabilities, output_format, output_file)
 
         return send_file(output_file, as_attachment=True, attachment_filename='output.' + output_format)
     else:
@@ -130,14 +142,14 @@ def process_parsing():
 @app.route('/explorer', methods=['GET'])
 def explorer():
     nessus_file = session.get('nessus_file', None)
-    findings = nessus_parser.explore_nessus_file(nessus_file)
+    findings = main.explore_nessus_file(nessus_file)
     
     return render_template('explorer.html', findings=findings)
 
 @app.route('/search', methods=['POST'])
 def search():
     nessus_file = session.get('nessus_file', None)
-    findings = nessus_parser.explore_nessus_file(nessus_file)
+    findings = main.explore_nessus_file(nessus_file)
     search_dict = {
         'host_ip': request.form.get('host-ip'),
         'plugin_name': request.form.get('plugin-name'),
