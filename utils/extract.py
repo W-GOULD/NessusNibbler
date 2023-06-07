@@ -1,5 +1,8 @@
 import xml.etree.ElementTree as ET
 import re
+import csv
+from collections import defaultdict
+from lxml import etree
 from docx.shared import Cm
 from docx.enum.style import WD_STYLE
 from styles import create_styles
@@ -11,6 +14,49 @@ def parse_nessus_file(file_name):
     tree = ET.parse(file_name)
     root = tree.getroot()
     return root
+
+
+def parse_for_cis(file_name):
+    tree = etree.parse(file_name)
+    namespaces = {'cm': 'http://www.nessus.org/cm'}
+
+    all_data = defaultdict(list)
+    
+    # Identify all unique hosts
+    hosts = tree.xpath('//ReportHost')
+
+    for host in hosts:
+        # Filter ReportItems for each host
+        report_items = host.xpath('.//ReportItem[cm:compliance-result="FAILED"]', namespaces=namespaces)
+
+        for item in report_items:
+            agent = item.find('agent')
+            if agent is not None:
+                check_name_element = item.find('cm:compliance-check-name', namespaces=namespaces)
+                compliance_info_element = item.find('cm:compliance-info', namespaces=namespaces)
+                compliance_actual_value_element = item.find('cm:compliance-actual-value', namespaces=namespaces)
+                compliance_solution_element = item.find('cm:compliance-solution', namespaces=namespaces)
+
+                if check_name_element is not None and compliance_info_element is not None and compliance_actual_value_element is not None:
+                    match = re.match(r"(\d+(\.\d+)*)(.*)", check_name_element.text)
+                    if match:
+                        item_no, benchmark = match.groups()[0:3:2]
+                        rationale = compliance_info_element.text.split('Rationale:\n\n')[1].split('\n\nImpact:')[0]
+                        recommendation = compliance_solution_element.text if compliance_solution_element is not None else 'N/A'
+                        current_setting = compliance_actual_value_element.text
+
+                        # Check for Unix/Linux file permission pattern only for unix hosts
+                        if agent.text == 'unix' and re.search(r'-[r-][w-][x-][r-][w-][x-][r-][w-][x-].*', current_setting):
+                            current_setting = "Check Permissions"
+                            
+                        # Key for dictionary
+                        key = (item_no, benchmark, rationale, recommendation, current_setting)
+
+                        # Add host to the list of affected hosts for this key
+                        all_data[key].append(host.get("name"))
+
+    return all_data
+
 
 def extract_data_from_nessus_file(root, microsoft_patches, third_party, linux_patches, unquoted_service_path):
     installed_software = {}
@@ -46,9 +92,24 @@ def extract_data_from_nessus_file(root, microsoft_patches, third_party, linux_pa
             plugin_family = finding.get('pluginFamily')
             severity = int(finding.get("severity"))
             if severity >= 1:
-                finding_name = finding.find('plugin_name').text
-                description = clean_description_text(finding.find('description').text.strip())
+                plugin_name_element = finding.find('plugin_name')
+                if plugin_name_element is not None:
+                    finding_name = plugin_name_element.text
+                else:
+                    finding_name = ''
+                
+                description_element = finding.find('description')
+                if description_element is not None:
+                    description = clean_description_text(description_element.text.strip())
+                else:
+                    description = ''
+                
                 plugin_output_element = finding.find('plugin_output')
+                if plugin_output_element is not None:
+                    plugin_output = plugin_output_element.text.strip()
+                else:
+                    plugin_output = 'N/A'
+                    
                 plugin_output = plugin_output_element.text.strip() if plugin_output_element is not None else 'N/A'
 
                 if plugin_id == "63155" and unquoted_service_path:  # Microsoft Windows Unquoted Service Path Enumeration
@@ -75,6 +136,10 @@ def extract_data_from_nessus_file(root, microsoft_patches, third_party, linux_pa
                                         process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
 
     return vulnerabilities
+
+
+
+
 
 def extract_findings_from_nessus_file(root):
     findings = []

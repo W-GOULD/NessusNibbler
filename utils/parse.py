@@ -1,7 +1,6 @@
 import re
 import xml.etree.ElementTree as ET
 import re
-
 from docx.shared import Cm
 from docx.enum.style import WD_STYLE
 from styles import create_styles

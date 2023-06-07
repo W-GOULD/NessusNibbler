@@ -127,15 +127,23 @@ def process_parsing():
     third_party = request.form.get('third_party') is not None
     linux_patches = request.form.get('linux_patches') is not None
     unquoted_service_path = request.form.get('unquoted_service_path') is not None
+    cis_compliance = request.form.get('cis_compliance') is not None
     output_format = request.form['output_format']
 
     if nessus_file:
         output_file = os.path.join(app.config['UPLOAD_FOLDER'], 'output.' + output_format)
 
-        vulnerabilities = main.parse_and_extract_data_from_nessus_file(nessus_file, microsoft_patches, third_party, linux_patches, unquoted_service_path)
-        main.print_output(vulnerabilities, output_format, output_file)
+        if cis_compliance == True:
+            data = main.cis(nessus_file)
+            main.print_output(data, output_format, output_file)
 
-        return send_file(output_file, as_attachment=True, attachment_filename='output.' + output_format)
+            return send_file(output_file, as_attachment=True, attachment_filename='output.' + output_format)
+
+        else:
+            vulnerabilities = main.parse_and_extract_data_from_nessus_file(nessus_file, microsoft_patches, third_party, linux_patches, unquoted_service_path)
+            main.print_output(vulnerabilities, output_format, output_file)
+
+            return send_file(output_file, as_attachment=True, attachment_filename='output.' + output_format)
     else:
         return jsonify({"error": "File is not supported or corrupted"}), 400
 

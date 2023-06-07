@@ -1,9 +1,18 @@
 from utils.extract import *
 import xml.etree.ElementTree as ET
 import docx
+import csv
 from docx.shared import Cm
 from docx.enum.style import WD_STYLE
 from styles import create_styles
+from collections import defaultdict
+
+def write_to_csv(filename, data):
+    with open(filename, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Item No", "Benchmark", "Rationale", "Recommendation", "Current Setting", "Targets"])
+        writer.writerows(data)
+
 
 def print_output(vulnerabilities, output_format="docx", output_file="output.docx"):
     if output_format == "docx":
@@ -103,3 +112,10 @@ def print_output(vulnerabilities, output_format="docx", output_file="output.docx
                     output_txt.write("\n\nAffected Targets:\n")
                     for target in info['targets']:
                         output_txt.write(f"  - {target}\n")
+
+
+    elif output_format == "csv":
+        with open(output_file, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Item No", "Benchmark", "Rationale", "Recommendation", "Current Setting", "Targets"])
+            writer.writerows(vulnerabilities)
