@@ -50,7 +50,7 @@ def parse_for_cis(file_name):
                             current_setting = "Check Permissions"
                             
                         # Key for dictionary
-                        key = (item_no, benchmark, rationale, recommendation, current_setting)
+                        key = (item_no, benchmark, rationale, recommendation, current_setting, host.get("name"))
 
                         # Add host to the list of affected hosts for this key
                         all_data[key].append(host.get("name"))
