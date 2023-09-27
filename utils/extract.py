@@ -8,6 +8,7 @@ from docx.enum.style import WD_STYLE
 from styles import create_styles
 from utils.parse import *
 from utils.vulnerabilities import *
+import html
 
 def parse_nessus_file(file_name):
     # Parse the file and return the root XML element
@@ -63,12 +64,22 @@ def extract_data_from_nessus_file(root, microsoft_patches, third_party, linux_pa
     linux_patches_lt = {}
     vulnerabilities = {}
     ms_bulletins_and_kbs = set()
+    processed_findings = set()
 
     for host in root.findall(".//ReportHost"):
         target = host.get("name")
         for item in host.findall('.//ReportItem[@pluginID="45590"]'):
             software_text = item.find('plugin_output').text.strip()
             installed_software[target] = parse_installed_software(software_text)
+
+        # Also parse software information from pluginID="66334"
+        for item in host.findall('.//ReportItem[@pluginID="66334"]'):
+            software_text = item.find('plugin_output').text.strip()
+            additional_software = parse_installed_software(software_text)
+            if target in installed_software:
+                installed_software[target].extend(additional_software)
+            else:
+                installed_software[target] = additional_software
         
         if linux_patches:
             for item in host.findall('.//ReportItem[@pluginID="66334"]'):
@@ -82,63 +93,57 @@ def extract_data_from_nessus_file(root, microsoft_patches, third_party, linux_pa
                     match = re.search(r'- (MS\d+-\d+|KB\d+)', line)
                     if match:
                         ms_bulletins_and_kbs.add(match.group(1))
+
+            for finding in root.findall('.//ReportItem[@pluginFamily="Windows : Microsoft Bulletins"]'):
+                severity = int(finding.get("severity"))
+                if severity >= 1:
+                    plugin_name_element = finding.find('plugin_name')
+                    if plugin_name_element is not None:
+                        finding_name = plugin_name_element.text
+                        ms_bulletins_and_kbs.add(finding_name)
+
             for finding in root.findall('.//ReportItem'):
-                finding_name = finding.find('plugin_name').text
-                if finding_name.startswith("Security Update for"):
+                finding_name = finding.find('plugin_name').text.strip()
+                if finding_name.startswith("Security Updates for"):
                     ms_bulletins_and_kbs.add(finding_name)
+
 
         for finding in host.findall('.//ReportItem'):
             plugin_id = finding.get("pluginID")
             plugin_family = finding.get('pluginFamily')
             severity = int(finding.get("severity"))
-            if severity >= 1:
-                plugin_name_element = finding.find('plugin_name')
-                if plugin_name_element is not None:
-                    finding_name = plugin_name_element.text
-                else:
-                    finding_name = ''
-                
-                description_element = finding.find('description')
-                if description_element is not None:
-                    description = clean_description_text(description_element.text.strip())
-                else:
-                    description = ''
-                
-                plugin_output_element = finding.find('plugin_output')
-                if plugin_output_element is not None:
-                    plugin_output = plugin_output_element.text.strip()
-                else:
-                    plugin_output = 'N/A'
-                    
-                plugin_output = plugin_output_element.text.strip() if plugin_output_element is not None else 'N/A'
+            
+            if severity < 1:
+                continue
 
-                if plugin_id == "63155" and unquoted_service_path:  # Microsoft Windows Unquoted Service Path Enumeration
-                    process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, target, output_as_dict=True)
-                else:
-                    for host_key, software_list in installed_software.items():
-                        combined_software_and_patches = software_list + list(ms_bulletins_and_kbs)
-                        
-                        for item in combined_software_and_patches:
-                            if item in finding_name:
-                                matched_bulletin_or_kb = any(bulletin_or_kb in finding_name for bulletin_or_kb in ms_bulletins_and_kbs)
-                                
-                                if microsoft_patches and matched_bulletin_or_kb:
-                                    process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
-                                elif third_party and not matched_bulletin_or_kb and "Microsoft" not in item:
-                                    process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
+            plugin_name_element = finding.find('plugin_name').text.strip()
+            finding_name = plugin_name_element if plugin_name_element is not None else ''
+            description = finding.findtext('description', '').strip()
+            plugin_output = finding.findtext('plugin_output', 'N/A').strip()
 
-                    # Separate loop for Linux patches
-                    if linux_patches:
-                        if plugin_family in linux_local_security_checks:
-                            for host_key, patches_list in linux_patches_lt.items():
-                                for patch in patches_list:
-                                    if patch in finding_name:
-                                        process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
+            if plugin_id == "63155" and unquoted_service_path:
+                process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, target, output_as_dict=True)
+            else:
+                for host_key, software_list in installed_software.items():
+                    for software in software_list:
+                        matched_bulletin_or_kb = any(bulletin_or_kb in finding_name for bulletin_or_kb in ms_bulletins_and_kbs)
+
+                        if microsoft_patches and matched_bulletin_or_kb:
+                            process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
+
+                        elif third_party and not matched_bulletin_or_kb:
+                                if finding_name in software:
+                                    process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
+                                    processed_findings.add(finding_name)  # Mark the finding as processed
+
+                if linux_patches and plugin_family in linux_local_security_checks:
+                    patches_list = linux_patches_lt.get(target, [])
+                    for patch in patches_list:
+                        if patch in finding_name:
+                            process_vulnerabilities(vulnerabilities, finding_name, description, plugin_output, host_key)
+
 
     return vulnerabilities
-
-
-
 
 
 def extract_findings_from_nessus_file(root):

@@ -1,4 +1,5 @@
 SOFTWARE_REGEX_PATTERN = r'cpe:/.*->\s+(.*)'
+SOFTWARE_REGEX_PATTERN2 = r'\[([^\]]+?)\s+\(\d+\)\s*\]'
 LINUX_PATCHES_REGEX_PATTERN = r'\[ (.*?) \('
 DESCRIPTION_CLEANUP_REGEX_PATTERN1 = r'<code>|</code>'
 DESCRIPTION_CLEANUP_REGEX_PATTERN2 = r' {2,}'
