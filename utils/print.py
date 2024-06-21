@@ -118,4 +118,6 @@ def print_output(vulnerabilities, output_format="docx", output_file="output.docx
         with open(output_file, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(["Item No", "Benchmark", "Rationale", "Recommendation", "Current Setting", "Targets"])
-            writer.writerows(vulnerabilities)
+            for item, hosts in vulnerabilities.items():
+                row = list(item) + ['\n'.join(hosts)]
+                writer.writerow(row)

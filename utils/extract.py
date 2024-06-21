@@ -21,12 +21,16 @@ def parse_for_cis(file_name):
     tree = etree.parse(file_name)
     namespaces = {'cm': 'http://www.nessus.org/cm'}
 
-    all_data = defaultdict(list)
+    # Dictionary to store compliance items as keys and sets of hosts as values
+    compliance_items = defaultdict(set)
     
     # Identify all unique hosts
     hosts = tree.xpath('//ReportHost')
 
     for host in hosts:
+        # Get the host name
+        host_name = host.get("name")
+        
         # Filter ReportItems for each host
         report_items = host.xpath('.//ReportItem[cm:compliance-result="FAILED"]', namespaces=namespaces)
 
@@ -42,8 +46,17 @@ def parse_for_cis(file_name):
                     match = re.match(r"(\d+(\.\d+)*)(.*)", check_name_element.text)
                     if match:
                         item_no, benchmark = match.groups()[0:3:2]
-                        rationale = compliance_info_element.text.split('Rationale:\n\n')[1].split('\n\nImpact:')[0]
-                        recommendation = compliance_solution_element.text if compliance_solution_element is not None else 'N/A'
+
+                        if 'Rationale:\n\n' in compliance_info_element.text and '\n\nImpact:' in compliance_info_element.text:
+                            rationale = compliance_info_element.text.split('Rationale:\n\n')[1].split('\n\nImpact:')[0]
+                        else:
+                            rationale = compliance_info_element.text
+
+                        if compliance_solution_element is not None and 'Impact:' in compliance_solution_element.text:
+                            recommendation = compliance_solution_element.text.split('Impact:')[0].strip()
+                        else:
+                            recommendation = compliance_solution_element.text if compliance_solution_element is not None else 'N/A'
+
                         current_setting = compliance_actual_value_element.text
 
                         # Check for Unix/Linux file permission pattern only for unix hosts
@@ -51,12 +64,12 @@ def parse_for_cis(file_name):
                             current_setting = "Check Permissions"
                             
                         # Key for dictionary
-                        key = (item_no, benchmark, rationale, recommendation, current_setting, host.get("name"))
+                        key = (item_no, benchmark, rationale, recommendation, current_setting)
 
-                        # Add host to the list of affected hosts for this key
-                        all_data[key].append(host.get("name"))
+                        # Add host to the set of hosts for this key
+                        compliance_items[key].add(host_name)
 
-    return all_data
+    return compliance_items
 
 
 def extract_data_from_nessus_file(root, microsoft_patches, third_party, linux_patches, unquoted_service_path):
